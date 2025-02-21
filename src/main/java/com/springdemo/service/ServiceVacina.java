@@ -8,6 +8,7 @@ import spark.Request;
 import spark.Response;
 import spark.Route;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,13 +21,22 @@ public class ServiceVacina {
 
                 ArrayList<Vacina> vacinas = DAOVacina.consultarVacinas();
 
-                if (!vacinas.isEmpty()) {
-                    response.status(200);
-                    return converteJson.writeValueAsString(VacinaDTO.toDTOList(vacinas));
-                } else {
-                    response.status(404);
-                    return "{\"message\": \"Nenhuma vacina encontrada no banco de dados.\"}";
+                try {
+                    if (!vacinas.isEmpty()) {
+                        response.status(200);
+                        return converteJson.writeValueAsString(VacinaDTO.toDTOList(vacinas));
+                    } else {
+                        response.status(204);
+                        return "{\"message\": \"Nenhuma vacina encontrada no banco de dados.\"}";
+                    }
+                } catch (NumberFormatException e) {
+                    response.status(400);
+                    return "{\"error\": \"ID do paciente inválido.\"}";
+                } catch (Exception e) {
+                    response.status(500);
+                    return "{\"error\": \"Erro no banco de dados ao buscar as vacinas.\"}";
                 }
+
             }
         };
     }
@@ -34,7 +44,7 @@ public class ServiceVacina {
     public static Route consultarVacinaPFaixa() {
         return new Route() {
             @Override
-            public Object handle(Request request, Response response) throws Exception {
+            public Object handle(Request request, Response response) {
                 ObjectMapper converteJson = new ObjectMapper();
 
                 try {
@@ -49,7 +59,7 @@ public class ServiceVacina {
                         return "{\"message\": \"Nenhum registro dessas vacinas por faixa foi encontrado.\"}" ;
                     }
 
-                } catch (IllegalArgumentException e) {
+                } catch (NumberFormatException e) {
                     response.status(400);
                     return "{\"message\": \"Faixa etária inválida. Use 'CRIANÇA' ou 'ADULTO'.\"}";
                 } catch (Exception e) {
@@ -61,7 +71,7 @@ public class ServiceVacina {
         };
     }
 
-    public static Route consultarVacinaPIdadeMaior() throws Exception{
+    public static Route consultarVacinaPIdadeMaior(){
         return new Route() {
             @Override
             public Object handle(Request request, Response response) throws Exception {
@@ -72,13 +82,15 @@ public class ServiceVacina {
                     ArrayList<Vacina> vacinasIdade = DAOVacina.consultarVacinaPIdadeMaior(idade);
 
                     if (!vacinasIdade.isEmpty()) {
-
                         response.status(200);
                         return converteJson.writeValueAsString(VacinaDTO.toDTOList(vacinasIdade));
                     } else {
                         response.status(204);
                         return "{\"message\": \"Nenhum registro dessas vacinas por idade foi encontrado.\"}" ;
                     }
+                } catch (NumberFormatException e) {
+                    response.status(400);
+                    return "{\"message\": \"Idade inválida.\"}";
                 } catch (Exception e) {
                     response.status(500);
                     return "{\"message\": \"Erro interno no servidor.\"}";
@@ -102,11 +114,14 @@ public class ServiceVacina {
                         return converteJson.writeValueAsString(VacinaDTO.toDTOList(vacinas));
                     } else {
                         response.status(204);
-                        return "{\"message\": \"Nenhuma vacina disponível para este paciente.\"}";
+                        return "{\"message\": \"Voce esta em dia com suas vacinas. Nenhuma vacina a ser aplicada\"}";
                     }
-                } catch (Exception e) {
+                } catch (NumberFormatException e) {
                     response.status(400);
-                    return "{\"message\": \"Erro ao buscar vacinas para o paciente.\"}";
+                    return "{\"message\": \"Id informado apresenta algum erro. Informar novamente.\"}";
+                } catch (Exception e) {
+                    response.status(500);
+                    return "{\"message\": \"Erro interno no servidor.\"}";
                 }
             }
         };
